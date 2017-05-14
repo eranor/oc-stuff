@@ -1,0 +1,152 @@
+local component = require("component")
+local event = require("event")
+local serialization = require("serialization")
+local term = require("term")
+local sides = require("sides")
+local computer = require("computer")
+local modem = component.modem
+
+
+--Classes
+local Robot = require("RobotClass")
+local Analyzer = require("Analyzer")
+local Chest = require("Chest")
+
+_DEBUG = true
+
+local analyzerLeft = Analyzer:new("e5d",{"EAST"})
+local analyzerCenter = Analyzer:new("431", {"SOUTH"})
+local analyzerRight = Analyzer:new("7f5", {"NORTH", "WEST"})
+
+
+
+local robot = Robot:new({-1432, 106, 513}, sides.east)
+
+robot:addItem("hoe", 16)
+robot:addItem("crops", 15)
+
+function analyze()
+  robot:forward()
+  os.sleep(1)
+  robot:forward()
+  os.sleep(1)
+  robot:_command({"component", "inventory_controller","dropIntoSlot"}, sides.bottom, 1)
+  analyzerRight:analyze()
+  local stats = analyzerRight:getSpecimenStats()
+  local soil = analyzerRight:getNeededSoil()
+  robot:_command({"component", "inventory_controller","suckFromSlot"}, sides.bottom, 1)
+  robot:back()  
+  os.sleep(1)
+  robot:back()  
+  os.sleep(1)
+  return stats, soil
+end
+
+local toInput = {"forward", "right", "forward"}
+local bcInput = {"back", "left", "back"}
+local toOutput = {"forward", "forward", "right", "forward"}
+local bcOutput = {"back", "left", "back", "back"}
+local toAE = {"forward", "forward", "forward", "right", "forward"}
+local bcAE = {"back", "left", "back", "back", "back"}
+
+local toFarm1 = {"forward"}
+local bcFarm1 = {"back"}
+local toFarm2 = {"left", "forward"}
+local bcFarm2 = {"back","right"}
+local toFarm3 = {"left", "forward", "right", "forward"}
+local bcFarm3 = {"back", "left", "back", "right"}
+local toFarm4 = {"left", "forward", "right", "forward", "forward"}
+local bcFarm4 = {"back", "back", "left", "back", "right"}
+
+local farms = {["farm1"]={toFarm1, bcFarm1},["farm2"]={toFarm2, bcFarm2},
+               ["farm3"]={toFarm3, bcFarm3},["farm4"]={toFarm4, bcFarm4}}
+
+local ANALYZED =  "d8a866a0fd3ac2d44dad5f3c5c8c9582"
+local MAX_LEVEL = "09bfd366c7c573993df15d1f0fbf0da5"
+
+
+local function doMove(d)
+  for _,v in pairs(d) do
+    robot[v](robot)
+    os.sleep(1)
+  end
+end
+
+local ChestInput = Chest:new("7fd")
+local ChestOutput = Chest:new("b6a")
+
+while true do
+  local event, address, arg2, arg3, arg4, arg5 = event.pull()
+  if event == "interrupted" then
+    stopListeners()
+    os.exit()
+  end
+  if event == "key_down" and arg2 == 13 and arg3 == 28 then
+    robot:forward()
+    os.sleep(1)
+    robot:back()  
+  end
+  print(arg2)
+  if event == "chestUpdated" then
+    if ChestInput.address == address then
+      if arg2 then
+        for _, item in pairs(serialization.unserialize(arg2)) do
+          if item.ore_dict.listAllseed then
+            if item.qty == 4 then
+              if item.nbt_hash == MAX_LEVEL then  
+        
+              elseif item.nbt_hash == ANALYZED or item.nbt_hash == nil then
+                computer.pushSignal("analyzeNewSeed", item.slot, ChestInput)
+              end
+            end
+          end
+        end
+      end
+    elseif ChestOutput.address == address then
+
+    end
+  end
+  --[[if event == "analyzeNewSeed" then
+    local item = arg2
+    doMove(toInput)
+    robot:select(5)
+    robot:_command({"component", "inventory_controller","suckFromSlot"}, sides.bottom, item.slot)
+    doMove(bcInput)
+    item.stats, item.soil = analyze()
+    computer.pushSignal("plantSeed", item)
+  end
+  if event == "plantSeed" then
+    local item = arg2
+    local neededSoil = {["Dirt"]=3, ["Sand"]=2, ["SoulSand"]=4}
+    doMove(toAE)
+    robot:select(6)
+    robot:_command({"component", "inventory_controller","suckFromSlot"}, sides.bottom, neededSoil[item.soil])
+    doMove(bcAE)
+    for k,v in pairs({farms}) do
+      doMove(v[1])
+      robot:down()
+      sleep(1)
+      robot:placeDown()
+      robot:up()
+      sleep(1)
+      if item.soil == "Dirt" then
+        robot:toggle_item("hoe")
+        robot:useDown(nil, nil, 0.5)
+        robot:toggle_item("hoe")
+      end
+      robot:toggle_item("crops")
+      robot:select(14)
+      robot:useDown(nil, false, 0.5)
+      if k ~= "farm3" then
+        robot:useDown(nil, false, 0.5)
+        robot:toggle_item("crops")
+        robot:select(14)
+        robot:transferTo(15)
+        robot:select(5)
+        robot:_command({"component", "inventory_controller","equip"})
+        robot:useDown(nil, false, 0.5)
+      end
+      doMove(v[2])
+    end
+  end]]
+end

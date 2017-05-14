@@ -1,0 +1,96 @@
+local component = require("component")
+local event = require("event")
+local serialization = require("serialization")
+local math = require("math")
+local modem = component.modem -- get primary modem component
+local term = require("term")
+local sides = require("sides")
+
+_ENV["robot"] = require("robot")
+_ENV["component"] = component
+
+function table.contains(table, element)
+  for _, value in pairs(table) do
+    if value == element then
+      return true
+    end
+  end
+  return false
+end
+
+function table.slice(tbl, first, last, step)
+  local sliced = {}
+  for i = first or 1, last or #tbl, step or 1 do
+    sliced[#sliced+1] = tbl[i]
+  end
+  return sliced
+end
+
+local COMPUTER_TYPE = 1
+local broadcast_port = 12
+local devicePort = math.random(65534)
+modem.open(broadcast_port)
+
+print("Address: " .. modem.address)
+
+local table = require("table")
+
+
+
+local function call(t)
+	local f = _ENV
+	local path = ""
+	while #t > 0 do
+		a = t[1]
+		if type(f[a]) ~=nil then
+			f = f[a]
+			if path == "" then
+				path = a
+			else
+				path = path .. "." .. a
+			end
+			t = table.slice(t, 2)
+		else
+			return "ERROR"
+		end
+	end
+	return f, path
+end
+
+while true do
+	local _, localAddress, from, port, _, message_type, uid, message, sender = event.pull("modem_message")		
+	if (message_type == "DscMsg" and message == COMPUTER_TYPE) then
+		term.write(string.sub(from, 1,4) .. "=" .. tostring(message_type) .. "(" .. tostring(message) .. ")\n")
+		modem.open(devicePort)
+		modem.send(from, sender, "DscRsp", uid, devicePort)
+	elseif (message_type == "CmdMsg") then
+		term.write(string.sub(from, 1,4) .. "=" .. tostring(message_type) .. "(" .. tostring(message) .. ")")
+		local message = serialization.unserialize(message)
+		local func, args = table.unpack(message)
+		local r = nil
+		if #func == 1 then
+			if func[1] == "getInventory" then
+				r = {}
+				for i=1, robot.getInventorySize() do
+					r[i] = component.inventory_controller.getStackInSlot(sides.back, i)
+				end
+			elseif func[1] == "hasComponent" then				
+				r = {type(component[args[1]]) ~= nil}
+			elseif _G[func[1]] ~= nil then
+				r = _G[func[1]](table.unpack(args)) or true
+			else
+				print("Error: unknown function - " .. tostring(func[1]))
+			end
+		else
+			r, path = call(func)(table.unpack(args))
+			if r == "ERROR"then
+				print("Error: unknown function - " ..path.."()")
+			end
+		end
+		os.sleep(0.5)
+		if r then
+			modem.send(from, sender, "CmdRsp", uid, serialization.serialize({"Done",r}))
+			term.write(": Ok\n")
+		end
+	end
+end

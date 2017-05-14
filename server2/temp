@@ -1,0 +1,43 @@
+local component = require("component")
+local package = require("package")
+local term = require("term")
+local serialization = require("serialization")
+local shell = require("shell")
+
+local args, options = shell.parse(...)
+local env = setmetatable({}, {__index = _ENV})
+
+if #args == 0 or options.i then
+  local function optrequire(...)
+    local success, module = pcall(require, ...)
+    if success then
+      return module
+    end
+  end
+  setmetatable(env, {
+    __index = function(t, k)
+      _ENV[k] = _ENV[k] or optrequire(k)
+      return _ENV[k]
+    end,
+    __pairs = function(self)
+      local t = self
+      return function(_, key)
+        local k, v = next(t, key)
+        if not k and t == env then
+          t = _ENV
+          k, v = next(t)
+        end
+        if not k and t == _ENV then
+          t = package.loaded
+          k, v = next(t)
+        end
+        return k, v
+      end
+    end
+  })
+end
+
+for k,v in pairs(_ENV) do
+	print(k)
+	io.read()
+end

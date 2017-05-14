@@ -1,0 +1,60 @@
+local event = require("event")
+local component = require("component")
+local serialization = require("serialization")
+
+function table.deepcompare(t1,t2,ignore_mt)
+    local ty1 = type(t1)
+    local ty2 = type(t2)
+    if ty1 ~= ty2 then return false end
+    -- non-table types can be directly compared
+    if ty1 ~= 'table' and ty2 ~= 'table' then return t1 == t2 end
+    -- as well as tables which have the metamethod __eq
+    local mt = getmetatable(t1)
+    if not ignore_mt and mt and mt.__eq then return t1 == t2 end
+    for k1,v1 in pairs(t1) do
+        local v2 = t2[k1]
+        if v2 == nil or not deepcompare(v1,v2) then return false end
+    end
+    for k2,v2 in pairs(t2) do
+        local v1 = t1[k2]
+        if v1 == nil or not deepcompare(v1,v2) then return false end
+    end
+    return true
+end
+
+
+local computer = require("computer")
+local function chestTimer()
+  local address = component.get("c67")
+  local chest = component.proxy(component.get(address))
+  local _chest = chest.getAllStacks()
+  local current = {}
+  for k,v in pairs(_chest) do
+      table.insert(current, v.all())      
+  end
+  local old = _G[address] or {}  
+  local so = serialization.serialize(old)
+  local sc = serialization.serialize(current)
+  if so ~= sc then
+    _G[address] = current
+    computer.pushSignal("chestUpdated", serialization.serialize(current))
+  end
+end
+
+_G["timerId"] = event.timer(1,chestTimer, math.huge)
+
+local 
+
+
+while true do
+  local ev, arg1, arg2= event.pull()
+  if ev == "interrupted" then
+    event.cancel(_G["timerId"])
+    os.exit()
+  elseif ev == "chestUpdated" then
+    local chest = serialization.unserialize(arg1)
+    for k,v in pairs(chest) do
+      print(serialization.serialize(v))
+    end
+  end
+end

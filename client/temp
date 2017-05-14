@@ -1,0 +1,8 @@
+require("serialization")
+require("robot")
+
+
+for k,v in pairs(_ENV) do
+  print(k)
+  io.read()
+end

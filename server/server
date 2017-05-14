@@ -1,0 +1,54 @@
+local component = require("component")
+local event = require("event")
+local serialization = require("serialization")
+local term = require("term")
+local sides = require("sides")
+local modem = component.modem
+
+local Robot = require("Robot")
+
+local function discover(computer_type, position, facing)
+	modem.open(11)
+	modem.broadcast(12, "DiscoveryMessage", computer_type)
+	term.write("Discovery message sent :")
+	local _, _, from, port, _, responseType, message, args = event.pull("modem_message")
+	if responseType == "DiscoveryResponse" then
+		term.write(responseType.."\n")
+		return Robot:new(from, args, position, facing)
+	end
+	return nil	
+end
+
+local analyzerLeft = Analyzer:new("e5d",{"EAST"})
+local analyzerCenter = Analyzer:new("431", "SOUTH")
+local analyzerRight = Analyzer:new("7f5", "NORTH", "WEST")
+
+local Chest = require("Chest")
+
+local ChestInput = Chest:new("c67")
+local ChestOutput = Chest:new("30f")
+
+local Robot r = discover(1, {["x"]=-1430, ["y"]=106, ["z"]=513}, sides.south)
+
+function analyze()
+	robot:forward()
+	robot:_command({"component", "inventory_controller","dropIntoSlot"}, sides.bottom, 1)
+	analyzerCenter.object.analyze()
+	stats = analyzerCenter.object.getSpecimenStats()
+	robot:_command({"component", "inventory_controller","suckFromSlot"}, sides.bottom, 1)
+	robot:back()	
+end
+
+
+
+while true do
+	local event, address, arg2, arg3, arg4, arg5 = event.pull()
+	if event == "interrupted" then
+		stopListeners()
+		os.exit()
+	end
+
+	if event == "chestUpdated" then
+		print(address)
+	end
+end

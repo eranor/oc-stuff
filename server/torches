@@ -1,0 +1,28 @@
+local component = require("component")
+local glasses = component.glasses
+
+
+local center = {-21,-41,-9}
+local max = 2
+
+local cubes = {}
+glasses.removeAll()
+
+
+	for j = 1, 8 do
+		for i = 1,8 do
+	  		local cube = glasses.addCube3D()
+	  		cube.set3DPos(center[1]+1+j*5, center[2], center[3]+1+i*7)
+	  		cube.setScale(cube.getScale()/2)
+	  		print("cube at: " .. tostring(center[1]+1+j*5)..", "..tostring(center[2])..", "..tostring(center[3]+1+i*7))
+	  		table.insert(cubes, cube)
+		end
+		for i = 1,8 do
+	  		local cube = glasses.addCube3D()
+	  		cube.set3DPos(center[1]+1+j*5, center[2], center[3]-2-i*7)
+	  		cube.setScale(cube.getScale()/2)
+	  		print("cube at: " .. tostring(center[1]+1+j*5)..", "..tostring(center[2])..", "..tostring(center[3]-2-i*7))
+	  		table.insert(cubes, cube)
+		end
+	end
+

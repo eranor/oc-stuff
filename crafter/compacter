@@ -1,0 +1,19 @@
+local component = require("component")
+local crafting = component.crafting
+local inv = component.inventory_controller
+local sides = require("sides")
+local size = inv.getInventorySize(sides.south)
+
+local compactables = {"minecraft:iron_ingot",0,"minecraft:gold_ingot",0,"IC2:itemIngot","1","ThermalFoundation:material","64","ThermalFoundation:material","66","ThermalFoundation:material","68","ThermalFoundation:material","67","ThermalFoundation:material","69","TConstruct:materials","11","TConstruct:materials","3","TConstruct:materials","4","BigReactors:BRIngot","0","DraconicEvolution:draconiumIngot",0,
+"minecraft:redstone",0,"minecraft:coal",0,"minecraft:dye","4","minecraft:diamond",0,"minecraft:emerald",0,"minecraft:quartz",0,"appliedenergistics2:item.ItemMultiMaterial",0,"ProjectRed|Core:projectred.core.part","37","ProjectRed|Core:projectred.core.part","38","ProjectRed|Core:projectred.core.part","39","ProjectRed|Core:projectred.core.part","56","Thaumcraft:ItemResource","6"}
+
+
+for i=1,size do
+	local item = inv.getStackInSlot(sides.south, i)
+	if item ~= nil then
+		if item.
+		print(item.name .. item.damage)
+	end
+end
+
+

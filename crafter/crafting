@@ -1,0 +1,77 @@
+local CHEST = 3
+local ASSEMBLY = 5
+local AE = 0
+
+
+local c = require("component")
+local serialization = require("serialization")
+local os = require("os")
+local transposer = c.proxy(c.list("transposer")())
+local assembler = c.assembler
+local maxDown = transposer.getInventorySize(CHEST)
+
+local f = io.open("items","r")
+local text = f:read("*a")
+f:close()
+local t = serialization.unserialize(text)
+
+local crafting = false
+while true do	
+	if crafting == false then
+		local t2 = serialization.unserialize(text)
+		for i=1,maxDown do
+			local stack = transposer.getStackInSlot(CHEST, i)
+			if stack ~= nil then
+				if t[stack.label] ~= nil then
+					t2[stack.label] = nil
+				end
+			end		
+		end
+		if #t2 == 0 then
+			print("Recipe found")
+			crafting = true
+		else
+			print("No recipe")
+			os.sleep(5)
+		end
+	else
+		for i=1,maxDown do
+			local stack = transposer.getStackInSlot(CHEST, i)
+			if stack ~= nil then
+				if t[stack.label] ~= nil then
+					if stack.label == "Microcontroller Case (Tier 1)" then
+						transposer.transferItem(CHEST,ASSEMBLY,1,i, t[stack.label])						
+						break
+					end
+				end
+			end		
+		end
+
+		for i=1,maxDown do
+			local stack = transposer.getStackInSlot(CHEST, i)
+			if stack ~= nil then
+				if t[stack.label] ~= nil then
+					if stack.label ~= "Microcontroller Case (Tier 1)" then
+						transposer.transferItem(CHEST,ASSEMBLY,1,i, t[stack.label])					
+					end
+				end
+			end		
+		end
+
+		assembler.start()
+		print("Assembly started")
+
+		while true do
+			if  transposer.getStackInSlot(ASSEMBLY, 1)~= nil then
+				if transposer.getStackInSlot(ASSEMBLY, 1).label ~= "Microcontroller" then
+					os.sleep(1)
+				else
+					break
+				end
+			end
+		end
+		print("Assembly done")
+		transposer.transferItem(ASSEMBLY,AE,1,1,1)
+		crafting = false
+	end
+end

@@ -1,0 +1,90 @@
+local component = require("component")
+local event = require("event")
+local serialization = require("serialization")
+local term = require("term")
+local gui = require("GUI")
+
+local modem = component.modem
+
+local res = {component.gpu.getResolution()}
+res = {["width"]=res[1], ["height"]=res[2]}
+local running = true
+
+local pos = {["x"]=-1408, ["y"]= 0, ["z"]=512}
+
+function split(str, pat)
+   local t = {}  -- NOTE: use {n = 0} in Lua-5.0
+   local fpat = "(.-)" .. pat
+   local last_end = 1
+   local s, e, cap = str:find(fpat, 1)
+   while s do
+      if s ~= 1 or cap ~= "" then
+   table.insert(t,cap)
+      end
+      last_end = e+1
+      s, e, cap = str:find(fpat, last_end)
+   end
+   if last_end <= #str then
+      cap = str:sub(last_end)
+      table.insert(t, cap)
+   end
+   return t
+end
+
+gui.initialize()
+
+gui.show()
+
+newFloatingLabelButton = gui.labelvox(10,10,5, 2, 101, nil, 0xFFAA00, nil, nil, "NEW")
+
+while running do
+    --counter.setText("Current uptime: %i",computer.uptime()-start_time)
+    os.sleep(0.7)
+end
+
+local function input(text, error)
+  local function resetCursor()
+    term.setCursor(cursor[1]+string.len(text), cursor[2])
+  end
+
+  local i = nil
+  local state = false
+  local cursor = {term.getCursor()}
+  io.write(text)
+  while i == nil or i == "" do
+    if state then
+      local e = event.pull("key_down")
+      resetCursor()
+      io.write(string.rep(" ", string.len(error))) 
+      state = false
+      term.setCursorBlink(true)
+      resetCursor()
+    end
+    i = io.read()
+    if i == nil or i == "" then
+      term.setCursor(cursor[1]+string.len(text), cursor[2])
+      io.write("  "..error)
+      state = true
+      term.setCursorBlink(false)
+    end 
+  end
+  return i
+end
+
+
+--[[while true do
+  local event, data = event.pull()
+  if event == "tablet_use" then
+    local d = {}
+    d["x"] = pos.x + data.posX
+    d["y"] = pos.y + data.posY
+    d["z"] = pos.z + data.posZ
+    d["text"] = input("Label text: ", "Please input label name.")
+    d["color"] = split(input("Label color(r,g,b): ", "Please set label color"), "[,]+")
+    d["lookingat"] = "true" == input("Looking At: ")
+    modem.broadcast(1, serialization.serialize(d))
+  elseif event == "interrupted" then
+    break
+  end
+  os.sleep(0.05)
+end]]
